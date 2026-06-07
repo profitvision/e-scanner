@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="ru">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -17,36 +16,31 @@
             margin: 0;
             padding: 15px;
         }
-
-        h1 {
-            font-size: 1.5em;
-            margin-bottom: 5px;
-        }
-
-        #video {
-            width: 100%;
-            max-width: 400px;
-            border-radius: 15px;
-            border: 3px solid #e94560;
-            margin: 10px auto;
-            display: block;
-        }
-
+        h1 { font-size: 1.5em; margin-bottom: 5px; }
         button {
-            padding: 12px 25px;
-            font-size: 1em;
+            display: block;
+            width: 280px;
+            padding: 15px;
+            font-size: 1.1em;
             background: #e94560;
             color: white;
             border: none;
             border-radius: 10px;
             cursor: pointer;
-            margin: 5px;
+            margin: 15px auto;
         }
-
-        button:active {
-            background: #c73652;
+        button:active { background: #c73652; }
+        input {
+            width: 250px;
+            padding: 12px;
+            font-size: 1.2em;
+            border-radius: 10px;
+            border: 2px solid #e94560;
+            text-align: center;
+            margin: 10px;
+            background: #16213e;
+            color: white;
         }
-
         #result {
             margin: 10px;
             font-size: 1.1em;
@@ -54,46 +48,36 @@
             max-width: 400px;
             margin: 10px auto;
         }
-
         .additive {
             padding: 8px;
             margin: 5px 0;
             border-radius: 8px;
             background: #16213e;
         }
-
-        .safe {
-            border-left: 5px solid #4CAF50;
-        }
-
-        .warning {
-            border-left: 5px solid #FF9800;
-        }
-
-        .danger {
-            border-left: 5px solid #e94560;
-        }
-
-        #loading {
-            color: #aaa;
-            font-size: 0.9em;
-        }
+        .safe { border-left: 5px solid #4CAF50; }
+        .warning { border-left: 5px solid #FF9800; }
+        .danger { border-left: 5px solid #e94560; }
+        #loading { color: #aaa; font-size: 0.9em; }
+        #manual { display: none; }
     </style>
 </head>
-
 <body>
     <h1>🔍 Сканер Е-добавок</h1>
-    <p>Наведите камеру на состав продукта</p>
-
-    <video id="video" autoplay></video>
-    <button onclick="startScan()">📷 Сканировать штрихкод</button>
-    <button onclick="stopScan()">⏹ Стоп</button>
+    <p>Отсканируйте штрихкод или введите вручную</p>
+    
+    <button onclick="startScan()">📷 Сканировать камерой</button>
+    
+    <p style="color:#aaa;">— или —</p>
+    
+    <input type="text" id="barcodeInput" placeholder="Введите штрихкод" inputmode="numeric">
+    <button onclick="searchManual()">🔎 Искать</button>
+    
     <p id="loading"></p>
     <div id="result"></div>
 
-    <script src="https://cdn.jsdelivr.net/npm/@ericblade/quagga2/dist/quagga.min.js"></script>
+    <!-- Встроенный сканер штрихкодов -->
     <script>
-        // База данных Е-добавок (название, описание, опасность)
+        // База данных Е-добавок
         var e_db = {
             "E100": ["Куркумин", "Натуральный краситель", "safe"],
             "E102": ["Тартразин", "Синтетический краситель. Может вызывать аллергию", "danger"],
@@ -103,24 +87,16 @@
             "E122": ["Азорубин", "Краситель. Может вызывать аллергию", "danger"],
             "E124": ["Понсо 4R", "Краситель. Запрещен в США", "danger"],
             "E129": ["Красный очаровательный", "Краситель. Возможен риск для здоровья", "warning"],
-            "E131": ["Патентованный синий", "Краситель. Может вызывать аллергию", "warning"],
-            "E132": ["Индигокармин", "Краситель. Может вызывать аллергию", "warning"],
             "E133": ["Бриллиантовый голубой", "Краситель. С осторожностью", "warning"],
             "E150": ["Сахарный колер", "Краситель. Безопасен", "safe"],
             "E160": ["Паприка", "Натуральный краситель", "safe"],
-            "E162": ["Свекольный красный", "Натуральный краситель", "safe"],
-            "E170": ["Карбонат кальция", "Белый краситель, мел", "safe"],
             "E200": ["Сорбиновая кислота", "Консервант. Безопасен", "safe"],
             "E202": ["Сорбат калия", "Консервант. Безопасен", "safe"],
-            "E210": ["Бензойная кислота", "Консервант. Может вызывать аллергию", "warning"],
             "E211": ["Бензоат натрия", "Консервант. В больших дозах опасен", "warning"],
             "E220": ["Диоксид серы", "Консервант. Разрушает витамин B1", "danger"],
-            "E224": ["Пиросульфит калия", "Консервант. Аллерген", "danger"],
             "E250": ["Нитрит натрия", "Консервант. В больших дозах токсичен", "danger"],
-            "E251": ["Нитрат натрия", "Консервант. Может быть канцерогеном", "danger"],
-            "E260": ["Уксусная кислота", "Консервант, регулятор кислотности. Безопасен", "safe"],
+            "E260": ["Уксусная кислота", "Консервант. Безопасен", "safe"],
             "E270": ["Молочная кислота", "Регулятор кислотности. Безопасна", "safe"],
-            "E290": ["Диоксид углерода", "Газ для газировки. Безопасен", "safe"],
             "E296": ["Яблочная кислота", "Регулятор кислотности. Безопасна", "safe"],
             "E300": ["Аскорбиновая кислота", "Витамин C. Безопасен", "safe"],
             "E306": ["Токоферол", "Витамин E. Безопасен", "safe"],
@@ -130,18 +106,14 @@
             "E322": ["Лецитин", "Эмульгатор. Обычно из сои, безопасен", "safe"],
             "E330": ["Лимонная кислота", "Регулятор кислотности. Безопасна", "safe"],
             "E338": ["Ортофосфорная кислота", "Регулятор кислотности. Вымывает кальций", "warning"],
-            "E339": ["Фосфаты натрия", "Эмульгатор. В больших дозах вреден", "warning"],
             "E341": ["Фосфаты кальция", "Регулятор кислотности. Безопасен", "safe"],
             "E400": ["Альгиновая кислота", "Загуститель из водорослей. Безопасен", "safe"],
             "E401": ["Альгинат натрия", "Загуститель. Безопасен", "safe"],
             "E406": ["Агар", "Загуститель из водорослей. Безопасен", "safe"],
             "E407": ["Каррагинан", "Загуститель. Может вызывать воспаления", "warning"],
-            "E410": ["Камедь рожкового дерева", "Загуститель. Безопасен", "safe"],
             "E412": ["Гуаровая камедь", "Загуститель. Безопасна", "safe"],
-            "E414": ["Гуммиарабик", "Загуститель. Безопасен", "safe"],
             "E415": ["Ксантановая камедь", "Загуститель. Безопасна", "safe"],
             "E420": ["Сорбит", "Подсластитель. В больших дозах слабит", "safe"],
-            "E421": ["Маннит", "Подсластитель. В больших дозах слабит", "safe"],
             "E422": ["Глицерин", "Влагоудерживающий агент. Безопасен", "safe"],
             "E440": ["Пектин", "Загуститель из фруктов. Безопасен", "safe"],
             "E450": ["Пирофосфаты", "Эмульгатор. Может нарушать баланс кальция", "warning"],
@@ -150,84 +122,105 @@
             "E460": ["Целлюлоза", "Загуститель. Безопасна", "safe"],
             "E466": ["Карбоксиметилцеллюлоза", "Загуститель. Безопасна", "safe"],
             "E471": ["Моно- и диглицериды", "Эмульгатор. Обычно безопасны", "safe"],
-            "E472": ["Эфиры жирных кислот", "Эмульгатор. Безопасны", "safe"],
             "E476": ["Полиглицерин", "Эмульгатор. Часто из ГМО-сои", "warning"],
             "E481": ["Стеароил-2-лактилат натрия", "Эмульгатор. Безопасен", "safe"],
             "E500": ["Карбонат натрия", "Разрыхлитель, сода. Безопасен", "safe"],
-            "E503": ["Карбонат аммония", "Разрыхлитель. Безопасен", "safe"],
             "E509": ["Хлорид кальция", "Отвердитель. Безопасен", "safe"],
             "E551": ["Диоксид кремния", "Добавка против слеживания. Безопасен", "safe"],
             "E621": ["Глутамат натрия", "Усилитель вкуса. Спорный, у некоторых головная боль", "warning"],
-            "E627": ["Гуанилат натрия", "Усилитель вкуса. С осторожностью", "warning"],
             "E631": ["Инозинат натрия", "Усилитель вкуса. Часто с глутаматом", "warning"],
-            "E635": ["5'-рибонуклеотиды натрия", "Усилитель вкуса. Спорная безопасность", "warning"],
             "E901": ["Пчелиный воск", "Глазирователь. Безопасен", "safe"],
-            "E903": ["Карнаубский воск", "Глазирователь. Безопасен", "safe"],
             "E904": ["Шеллак", "Глазирователь. Безопасен", "safe"],
             "E950": ["Ацесульфам калия", "Подсластитель. Спорная безопасность", "warning"],
             "E951": ["Аспартам", "Подсластитель. Противопоказан при фенилкетонурии", "warning"],
             "E952": ["Цикламат натрия", "Подсластитель. Запрещен в США", "danger"],
-            "E954": ["Сахарин", "Подсластитель. Спорная безопасность", "warning"],
             "E955": ["Сукралоза", "Подсластитель. Безопасен в малых дозах", "safe"],
             "E960": ["Стевия", "Натуральный подсластитель. Безопасен", "safe"],
-            "E961": ["Неотам", "Подсластитель. Безопасен", "safe"],
-            "E965": ["Мальтит", "Подсластитель. В больших дозах слабит", "safe"],
             "E967": ["Ксилит", "Подсластитель. Полезен для зубов", "safe"],
             "E968": ["Эритрит", "Подсластитель. Безопасен", "safe"],
-            "E1200": ["Полидекстроза", "Наполнитель. Безопасна", "safe"],
-            "E1400": ["Декстрины", "Стабилизатор. Безопасны", "safe"],
-            "E1422": ["Ацетилированный крахмал", "Загуститель. Безопасен", "safe"],
-            "E1442": ["Фосфатированный крахмал", "Стабилизатор. Безопасен", "safe"]
+            "E1422": ["Ацетилированный крахмал", "Загуститель. Безопасен", "safe"]
         };
 
         function startScan() {
-            document.getElementById("loading").textContent = "Запуск камеры...";
+            document.getElementById("loading").textContent = "Запуск сканера...";
             document.getElementById("result").innerHTML = "";
-
-            Quagga.init({
-                inputStream: {
-                    name: "Live",
-                    type: "LiveStream",
-                    target: document.querySelector("#video"),
-                    constraints: { facingMode: "environment" }
-                },
-                decoder: { readers: ["ean_reader", "ean_8_reader"] }
-            }, function (err) {
-                if (err) {
-                    document.getElementById("loading").textContent = "Ошибка камеры. Разрешите доступ.";
-                    return;
-                }
-                document.getElementById("loading").textContent = "Наведите камеру на штрихкод...";
-                Quagga.start();
-            });
-
-            Quagga.onDetected(function (result) {
-                var code = result.codeResult.code;
-                document.getElementById("loading").textContent = "Штрихкод: " + code;
-                Quagga.stop();
-                fetchProductInfo(code);
-            });
+            
+            // Проверяем поддержку BarcodeDetector
+            if ('BarcodeDetector' in window) {
+                scanWithBarcodeDetector();
+            } else {
+                document.getElementById("loading").textContent = "Сканер не поддерживается. Введите штрихкод вручную:";
+            }
         }
 
-        function stopScan() {
-            Quagga.stop();
-            document.getElementById("loading").textContent = "Остановлено";
+        function scanWithBarcodeDetector() {
+            var video = document.createElement("video");
+            var canvas = document.createElement("canvas");
+            
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function(stream) {
+                    video.srcObject = stream;
+                    video.play();
+                    document.getElementById("loading").textContent = "Наведите на штрихкод...";
+                    
+                    var barcodeDetector = new BarcodeDetector({ formats: ["ean_13", "ean_8"] });
+                    
+                    function detectLoop() {
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            canvas.width = video.videoWidth;
+                            canvas.height = video.videoHeight;
+                            canvas.getContext("2d").drawImage(video, 0, 0, canvas.width, canvas.height);
+                            
+                            barcodeDetector.detect(canvas)
+                                .then(function(barcodes) {
+                                    if (barcodes.length > 0) {
+                                        stream.getTracks().forEach(track => track.stop());
+                                        document.getElementById("loading").textContent = "Найден!";
+                                        fetchProductInfo(barcodes[0].rawValue);
+                                        return;
+                                    }
+                                    requestAnimationFrame(detectLoop);
+                                })
+                                .catch(function() {
+                                    requestAnimationFrame(detectLoop);
+                                });
+                        } else {
+                            requestAnimationFrame(detectLoop);
+                        }
+                    }
+                    
+                    detectLoop();
+                })
+                .catch(function() {
+                    document.getElementById("loading").textContent = "Нет доступа к камере. Введите штрихкод вручную:";
+                });
+        }
+
+        function searchManual() {
+            var code = document.getElementById("barcodeInput").value.trim();
+            if (code.length < 8) {
+                document.getElementById("loading").textContent = "Введите корректный штрихкод (8-13 цифр)";
+                return;
+            }
+            document.getElementById("loading").textContent = "Ищем...";
+            document.getElementById("result").innerHTML = "";
+            fetchProductInfo(code);
         }
 
         function fetchProductInfo(barcode) {
             document.getElementById("loading").textContent = "Ищем продукт в базе...";
-
+            
             fetch("https://world.openfoodfacts.org/api/v0/product/" + barcode + ".json")
-                .then(function (response) { return response.json(); })
-                .then(function (data) {
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
                     if (data.status === 1) {
                         showAdditives(data.product);
                     } else {
-                        document.getElementById("loading").textContent = "Продукт не найден в базе. Попробуйте другой.";
-                        document.getElementById("result").innerHTML = "<p>База данных пополняется каждый день. Этого товара пока нет.</p>";
+                        document.getElementById("loading").textContent = "Продукт не найден. Попробуйте другой.";
+                        document.getElementById("result").innerHTML = "<p>Этого товара пока нет в базе. База пополняется каждый день.</p>";
                     }
                 })
-                .catch(function () {
+                .catch(function() {
                     document.getElementById("loading").textContent = "Ошибка соединения. Проверьте интернет.";
                 });
         }
@@ -235,20 +228,20 @@
         function showAdditives(product) {
             var name = product.product_name || "Название не указано";
             var additives = product.additives_tags || [];
-
+            
             var html = "<h3>📦 " + name + "</h3>";
-
+            
             if (additives.length === 0) {
                 html += "<p>✅ Е-добавки не найдены!</p>";
             } else {
                 html += "<p>Найдено Е-добавок: <b>" + additives.length + "</b></p>";
-
+                
                 for (var i = 0; i < additives.length; i++) {
                     var code = additives[i].replace("en:", "").toUpperCase();
                     var info = e_db[code];
-
+                    
                     if (info) {
-                        var cssClass = info[2]; // safe, warning, danger
+                        var cssClass = info[2];
                         html += '<div class="additive ' + cssClass + '">';
                         html += '<b>' + code + '</b> — ' + info[0] + '<br>';
                         html += '<small>' + info[1] + '</small>';
@@ -266,5 +259,4 @@
         }
     </script>
 </body>
-
 </html>
