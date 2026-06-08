@@ -6,6 +6,16 @@
 <title>Сканер Е-добавок</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
+<!-- QuaggaJS подгружается только при необходимости -->
+<script>
+// Флаг: загружать ли Quagga
+window.__useQuagga = !('BarcodeDetector' in window);
+if (window.__useQuagga) {
+    var qScript = document.createElement('script');
+    qScript.src = 'https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.2/dist/quagga.min.js';
+    document.head.appendChild(qScript);
+}
+</script>
 <style>
 :root {
   --bg:#0d0d14;--bg2:#13131f;--bg3:#1a1a2e;--card:#1e1e30;
@@ -28,11 +38,11 @@ body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--
 #vcont{position:relative;width:100%;aspect-ratio:4/3;background:#000;display:none}
 #vcont.on{display:block}
 #vid{width:100%;height:100%;object-fit:cover;display:block}
-.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none}
+.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2}
 .frame{width:220px;height:130px;border:2px solid var(--accent);border-radius:10px;position:relative;box-shadow:0 0 0 2000px rgba(0,0,0,.5)}
 .line{position:absolute;left:8px;right:8px;height:2px;background:var(--accent);animation:sc 2s ease-in-out infinite;box-shadow:0 0 6px var(--accent)}
 @keyframes sc{0%,100%{top:15%}50%{top:80%}}
-.hint{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.75em;color:rgba(255,255,255,.8);background:rgba(0,0,0,.6);padding:6px}
+.hint{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.75em;color:rgba(255,255,255,.8);background:rgba(0,0,0,.6);padding:6px;z-index:3}
 .stop-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 10px;font-size:.75em;cursor:pointer;z-index:5}
 .ctrl{padding:14px;display:flex;flex-direction:column;gap:10px}
 .btn{width:100%;padding:13px;font-size:.92em;font-weight:600;border:none;border-radius:var(--rs);cursor:pointer;transition:opacity .15s;letter-spacing:.2px}
@@ -71,6 +81,7 @@ textarea{height:78px;resize:vertical;line-height:1.5}
 .ci{font-size:2.2em;margin-bottom:8px}
 .ct{font-size:.95em;font-weight:700;color:var(--green)}
 .cs{font-size:.8em;color:var(--text2);margin-top:4px}
+#engine-badge{display:inline-block;font-size:.6em;padding:2px 6px;border-radius:4px;background:var(--bg3);color:var(--text3);margin-left:6px;vertical-align:middle}
 </style>
 </head>
 <body>
@@ -91,7 +102,7 @@ textarea{height:78px;resize:vertical;line-height:1.5}
       <button class="stop-btn" onclick="stopCam()">✕ Стоп</button>
     </div>
     <div class="ctrl">
-      <button id="cbtn" class="btn btn-red" onclick="startCam()">📷 Включить камеру</button>
+      <button id="cbtn" class="btn btn-red" onclick="startCam()">📷 Включить камеру <span id="engine-badge"></span></button>
       <div class="divider">или</div>
       <input type="text" id="bi" placeholder="Введите штрихкод (8–13 цифр)" inputmode="numeric" onkeydown="if(event.key==='Enter')goBarcode()">
       <button class="btn btn-out" onclick="goBarcode()">🔍 Найти продукт</button>
@@ -111,6 +122,7 @@ textarea{height:78px;resize:vertical;line-height:1.5}
 <div id="result"></div>
 
 <script>
+// === БАЗА ДАННЫХ ===
 var DB={
 "E100":["Куркумин","Натуральный краситель из куркумы","safe"],
 "E101":["Рибофлавин","Витамин B2. Безопасен","safe"],
@@ -292,7 +304,18 @@ var DB={
 "E1520":["Пропиленгликоль","Растворитель. С осторожностью","warning"]
 };
 
-var stream=null, raf=null, detector=null;
+// === СОСТОЯНИЕ СКАНЕРА ===
+var stream=null, raf=null, detector=null, quaggaRunning=false;
+var useNative = ('BarcodeDetector' in window);
+
+// Показываем бейдж движка
+(function(){
+    var badge = document.getElementById('engine-badge');
+    if (badge) {
+        badge.textContent = useNative ? '⚡ нативный' : '🔄 Quagga';
+        badge.title = useNative ? 'Android / Chrome — быстрый сканер' : 'iPhone / Safari — сканер с анализом кадров';
+    }
+})();
 
 function sw(t){
   document.querySelectorAll('.tab-content').forEach(function(e){e.classList.remove('active')});
@@ -306,144 +329,14 @@ function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').repl
 
 function stopCam(){
   if(raf){cancelAnimationFrame(raf);raf=null}
+  if(quaggaRunning && typeof Quagga !== 'undefined'){
+    try{ Quagga.stop(); }catch(e){}
+    quaggaRunning=false;
+  }
   if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
   document.getElementById('vcont').classList.remove('on');
   var b=document.getElementById('cbtn');b.textContent='📷 Включить камеру';b.disabled=false;
 }
 
 function startCam(){
-  document.getElementById('result').innerHTML='';
-  var b=document.getElementById('cbtn');b.disabled=true;b.textContent='⏳ Загрузка...';
-  st('Запрашиваю доступ к камере...');
-  navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}})
-    .then(function(s){
-      stream=s;
-      var v=document.getElementById('vid');
-      v.srcObject=s;
-      document.getElementById('vcont').classList.add('on');
-      b.textContent='🔄 Перезапустить';b.disabled=false;
-      v.onloadedmetadata=function(){
-        v.play();
-        st('Наведите камеру на штрихкод');
-        if('BarcodeDetector' in window){
-          detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','upc_e','code_128','code_39','qr_code']});
-          scanLoop(v);
-        } else {
-          st('Автосканер недоступен в вашем браузере. Введите штрихкод вручную ниже.');
-          stopCam();
-        }
-      };
-    })
-    .catch(function(e){
-      stopCam();
-      if(e.name==='NotAllowedError') st('Нет доступа к камере — разрешите доступ в настройках браузера');
-      else if(e.name==='NotFoundError') st('Камера не найдена');
-      else st('Ошибка камеры: '+e.message);
-    });
-}
-
-function scanLoop(v){
-  if(!stream){return}
-  detector.detect(v).then(function(r){
-    if(r&&r.length>0){
-      var code=r[0].rawValue;
-      stopCam();
-      st('Штрихкод: '+code+' — ищем...');
-      fetchProduct(code);
-    } else {
-      raf=requestAnimationFrame(function(){scanLoop(v)});
-    }
-  }).catch(function(){
-    raf=requestAnimationFrame(function(){scanLoop(v)});
-  });
-}
-
-function goBarcode(){
-  var code=document.getElementById('bi').value.trim().replace(/\D/g,'');
-  if(code.length<8){st('Введите корректный штрихкод (8–13 цифр)');return}
-  document.getElementById('result').innerHTML='';
-  st('Ищем продукт...');
-  fetchProduct(code);
-}
-
-function fetchProduct(barcode){
-  var url='https://world.openfoodfacts.org/api/v0/product/'+barcode+'.json?fields=product_name,product_name_ru,brands,additives_tags,additives_original_tags';
-  fetch(url)
-    .then(function(r){return r.json()})
-    .then(function(d){
-      if(d.status===1){st('');renderProduct(d.product)}
-      else{
-        st('Продукт не найден в Open Food Facts');
-        document.getElementById('result').innerHTML='<div style="text-align:center;padding:28px 0;color:var(--text2);font-size:.88em;">😔 Товар не найден в базе.<br><br>Перейдите на вкладку <b>✍️ Вручную</b><br>и введите Е-добавки с упаковки.</div>';
-      }
-    })
-    .catch(function(){st('Ошибка соединения — проверьте интернет')});
-}
-
-function goManual(){
-  var raw=document.getElementById('mi').value.trim().toUpperCase();
-  if(!raw){st('Введите Е-добавки');return}
-  var codes=raw.split(/[\s,;]+/).filter(Boolean).map(function(c){c=c.trim();return c[0]==='E'?c:'E'+c});
-  st('');
-  document.getElementById('result').innerHTML='';
-  renderAdditives(null,null,codes);
-}
-
-function renderProduct(p){
-  var name=p.product_name_ru||p.product_name||'Название не указано';
-  var brand=p.brands||'';
-  var tags=p.additives_tags||p.additives_original_tags||[];
-  var codes=tags.map(function(t){return t.replace(/^[a-z]{2}:/i,'').toUpperCase()});
-  renderAdditives(name,brand,codes);
-}
-
-function renderAdditives(name,brand,codes){
-  var html='';
-  if(name){
-    html+='<div class="ph">';
-    html+='<div class="pn">📦 '+esc(name)+'</div>';
-    if(brand)html+='<div class="pm">'+esc(brand)+'</div>';
-    var nd=codes.filter(function(c){return DB[c]&&DB[c][2]==='danger'}).length;
-    var nw=codes.filter(function(c){return DB[c]&&DB[c][2]==='warning'}).length;
-    var ns=codes.filter(function(c){return DB[c]&&DB[c][2]==='safe'}).length;
-    html+='<div class="badges">';
-    if(codes.length===0){html+='<span class="badge bc">✓ Без Е-добавок</span>'}
-    else{
-      html+='<span style="font-size:.8em;color:var(--text2)">Добавок: <b>'+codes.length+'</b></span>';
-      if(nd)html+='<span class="badge bd">⚠ опасных: '+nd+'</span>';
-      if(nw)html+='<span class="badge bw">! спорных: '+nw+'</span>';
-      if(ns)html+='<span class="badge bc">✓ безопасных: '+ns+'</span>';
-    }
-    html+='</div></div>';
-  }
-  if(codes.length===0){
-    html+='<div class="clean"><div class="ci">🌿</div><div class="ct">Продукт чистый!</div><div class="cs">Е-добавки не обнаружены</div></div>';
-    document.getElementById('result').innerHTML=html;return;
-  }
-  var danger=[],warn=[],safe=[],unknown=[];
-  codes.forEach(function(c){
-    var i=DB[c];
-    if(!i)unknown.push(c);
-    else if(i[2]==='danger')danger.push(c);
-    else if(i[2]==='warning')warn.push(c);
-    else safe.push(c);
-  });
-  html+='<div class="legend"><span class="li"><span class="ld" style="background:var(--red)"></span>Опасно</span><span class="li"><span class="ld" style="background:var(--yellow)"></span>Спорно</span><span class="li"><span class="ld" style="background:var(--green)"></span>Безопасно</span><span class="li"><span class="ld" style="background:var(--text3)"></span>Нет данных</span></div>';
-  function rg(list,cls,icon){
-    return list.map(function(c){
-      var i=DB[c];
-      return '<div class="ai '+cls+'"><span class="si">'+icon+'</span>'
-        +'<div class="ac">'+c+(i?' — <span class="an">'+esc(i[0])+'</span>':'')+'</div>'
-        +(i?'<div class="ad">'+esc(i[1])+'</div>':'<div class="ad" style="color:var(--text3)">Нет данных в базе</div>')
-        +'</div>';
-    }).join('');
-  }
-  if(danger.length)html+='<div class="sec">⚠️ Опасные</div>'+rg(danger,'danger','🔴');
-  if(warn.length)html+='<div class="sec">⚡ Спорные</div>'+rg(warn,'warning','🟡');
-  if(safe.length)html+='<div class="sec">✅ Безопасные</div>'+rg(safe,'safe','🟢');
-  if(unknown.length)html+='<div class="sec">❓ Нет данных</div>'+rg(unknown,'unknown','⚪');
-  document.getElementById('result').innerHTML=html;
-}
-</script>
-</body>
-</html>
+  document.getElementById
