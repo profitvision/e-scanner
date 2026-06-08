@@ -6,82 +6,64 @@
 <title>Сканер Е-добавок</title>
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<!-- QuaggaJS подгружается только при необходимости -->
-<script>
-// Флаг: загружать ли Quagga
-window.__useQuagga = !('BarcodeDetector' in window);
-if (window.__useQuagga) {
-    var qScript = document.createElement('script');
-    qScript.src = 'https://cdn.jsdelivr.net/npm/@ericblade/quagga2@1.8.2/dist/quagga.min.js';
-    document.head.appendChild(qScript);
-}
-</script>
 <style>
 :root {
   --bg:#0d0d14;--bg2:#13131f;--bg3:#1a1a2e;--card:#1e1e30;
   --border:rgba(255,255,255,0.08);--accent:#e94560;
-  --green:#4ade80;--yellow:#fbbf24;--red:#f87171;--gray:#6b7280;
+  --green:#4ade80;--yellow:#fbbf24;--red:#f87171;
   --text:#f1f5f9;--text2:#94a3b8;--text3:#475569;
-  --r:14px;--rs:8px;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:-apple-system,'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:500px;margin:0 auto;padding-bottom:40px}
+body{font-family:-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;max-width:500px;margin:0 auto;padding-bottom:40px}
 .header{padding:18px 20px 14px;background:var(--bg2);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
 .header h1{font-size:1.25em;font-weight:700}
 .header h1 span{color:var(--accent)}
-.tabs{display:flex;margin-top:12px;background:var(--bg3);border-radius:10px;padding:3px;gap:0}
-.tab-btn{flex:1;padding:8px;font-size:0.82em;font-weight:600;border:none;background:transparent;color:var(--text2);border-radius:8px;cursor:pointer;transition:all .2s}
+.tabs{display:flex;margin-top:12px;background:var(--bg3);border-radius:10px;padding:3px}
+.tab-btn{flex:1;padding:8px;font-size:0.82em;font-weight:600;border:none;background:transparent;color:var(--text2);border-radius:8px;cursor:pointer}
 .tab-btn.active{background:var(--accent);color:#fff}
 .tab-content{display:none;padding:18px 20px}
 .tab-content.active{display:block}
-.card{background:var(--card);border-radius:var(--r);border:1px solid var(--border);overflow:hidden;margin-bottom:14px}
+.card{background:var(--card);border-radius:14px;border:1px solid var(--border);overflow:hidden;margin-bottom:14px}
 #vcont{position:relative;width:100%;aspect-ratio:4/3;background:#000;display:none}
 #vcont.on{display:block}
 #vid{width:100%;height:100%;object-fit:cover;display:block}
 .overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;z-index:2}
 .frame{width:220px;height:130px;border:2px solid var(--accent);border-radius:10px;position:relative;box-shadow:0 0 0 2000px rgba(0,0,0,.5)}
-.line{position:absolute;left:8px;right:8px;height:2px;background:var(--accent);animation:sc 2s ease-in-out infinite;box-shadow:0 0 6px var(--accent)}
-@keyframes sc{0%,100%{top:15%}50%{top:80%}}
 .hint{position:absolute;bottom:0;left:0;right:0;text-align:center;font-size:.75em;color:rgba(255,255,255,.8);background:rgba(0,0,0,.6);padding:6px;z-index:3}
 .stop-btn{position:absolute;top:8px;right:8px;background:rgba(0,0,0,.7);color:#fff;border:1px solid rgba(255,255,255,.3);border-radius:6px;padding:4px 10px;font-size:.75em;cursor:pointer;z-index:5}
 .ctrl{padding:14px;display:flex;flex-direction:column;gap:10px}
-.btn{width:100%;padding:13px;font-size:.92em;font-weight:600;border:none;border-radius:var(--rs);cursor:pointer;transition:opacity .15s;letter-spacing:.2px}
-.btn:active{opacity:.8}
-.btn:disabled{opacity:.4;cursor:default}
+input,textarea{width:100%;padding:12px;font-size:.92em;background:var(--bg3);border:1px solid var(--border);border-radius:8px;color:var(--text);outline:none}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{height:78px;resize:vertical}
+.lbl{font-size:.75em;color:var(--text2);text-transform:uppercase;font-weight:600;margin-bottom:7px}
+.btn{width:100%;padding:13px;font-size:.92em;font-weight:600;border:none;border-radius:8px;cursor:pointer;margin-bottom:10px}
 .btn-red{background:var(--accent);color:#fff}
 .btn-out{background:transparent;color:var(--text);border:1px solid var(--border)}
-.divider{display:flex;align-items:center;gap:10px;color:var(--text3);font-size:.75em;text-transform:uppercase;letter-spacing:1px}
+.divider{display:flex;align-items:center;gap:10px;color:var(--text3);font-size:.75em;text-transform:uppercase;margin:15px 0}
 .divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
-input,textarea{width:100%;padding:12px 14px;font-size:.92em;background:var(--bg3);border:1px solid var(--border);border-radius:var(--rs);color:var(--text);outline:none;font-family:inherit;transition:border-color .2s}
-input:focus,textarea:focus{border-color:var(--accent)}
-input::placeholder,textarea::placeholder{color:var(--text3)}
-textarea{height:78px;resize:vertical;line-height:1.5}
-.lbl{font-size:.75em;color:var(--text2);text-transform:uppercase;letter-spacing:.8px;font-weight:600;margin-bottom:7px}
 #status{padding:8px 20px 0;font-size:.82em;color:var(--text2);min-height:26px;text-align:center}
 #result{padding:0 20px}
-.ph{background:var(--card);border-radius:var(--r);border:1px solid var(--border);padding:15px;margin-bottom:12px}
-.pn{font-size:.98em;font-weight:600;margin-bottom:5px;line-height:1.4}
+.ph{background:var(--card);border-radius:14px;border:1px solid var(--border);padding:15px;margin-bottom:12px}
+.pn{font-size:.98em;font-weight:600;margin-bottom:5px}
 .pm{font-size:.78em;color:var(--text2)}
 .badges{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
 .badge{display:inline-block;padding:3px 9px;border-radius:20px;font-size:.75em;font-weight:700}
 .bc{background:rgba(74,222,128,.15);color:var(--green)}
 .bw{background:rgba(251,191,36,.15);color:var(--yellow)}
 .bd{background:rgba(248,113,113,.15);color:var(--red)}
-.sec{font-size:.72em;text-transform:uppercase;letter-spacing:1px;color:var(--text3);font-weight:600;margin:14px 0 7px}
-.ai{background:var(--card);border-radius:var(--rs);padding:11px 13px;margin-bottom:7px;border-left:3px solid var(--gray);position:relative}
-.ai.safe{border-left-color:var(--green)}.ai.warning{border-left-color:var(--yellow)}.ai.danger{border-left-color:var(--red)}.ai.unknown{border-left-color:var(--text3)}
-.ac{font-size:.88em;font-weight:700;margin-bottom:2px}
-.an{font-size:.84em;font-weight:600}
-.ad{font-size:.76em;color:var(--text2);margin-top:3px;line-height:1.4}
+.sec{font-size:.72em;text-transform:uppercase;color:var(--text3);font-weight:600;margin:14px 0 7px}
+.ai{background:var(--card);border-radius:8px;padding:11px 13px;margin-bottom:7px;border-left:3px solid var(--gray);position:relative}
+.ai.safe{border-left-color:var(--green)}.ai.warning{border-left-color:var(--yellow)}.ai.danger{border-left-color:var(--red)}
+.ac{font-size:.88em;font-weight:700}.an{font-size:.84em;font-weight:600}.ad{font-size:.76em;color:var(--text2);margin-top:3px}
 .si{position:absolute;right:11px;top:11px;font-size:.95em}
 .legend{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px}
 .li{display:flex;align-items:center;gap:4px;font-size:.72em;color:var(--text2)}
 .ld{width:8px;height:8px;border-radius:50%}
-.clean{text-align:center;padding:28px 20px;background:var(--card);border-radius:var(--r);border:1px solid var(--border)}
-.ci{font-size:2.2em;margin-bottom:8px}
-.ct{font-size:.95em;font-weight:700;color:var(--green)}
-.cs{font-size:.8em;color:var(--text2);margin-top:4px}
-#engine-badge{display:inline-block;font-size:.6em;padding:2px 6px;border-radius:4px;background:var(--bg3);color:var(--text3);margin-left:6px;vertical-align:middle}
+.clean{text-align:center;padding:28px;background:var(--card);border-radius:14px;border:1px solid var(--border)}
+.ci{font-size:2.2em}.ct{font-size:.95em;font-weight:700;color:var(--green)}.cs{font-size:.8em;color:var(--text2)}
+.info{font-size:.75em;color:var(--text3);text-align:center;margin-top:8px}
+a{color:var(--accent)}
+.iphone-note{background:#2a1a1a;border:1px solid var(--accent);border-radius:8px;padding:10px;text-align:center;font-size:.78em;color:var(--text2);margin-bottom:10px}
 </style>
 </head>
 <body>
@@ -97,15 +79,16 @@ textarea{height:78px;resize:vertical;line-height:1.5}
   <div class="card">
     <div id="vcont">
       <video id="vid" autoplay playsinline muted></video>
-      <div class="overlay"><div class="frame"><div class="line"></div></div></div>
-      <div class="hint">Поместите штрихкод в рамку</div>
+      <div class="overlay"><div class="frame"></div></div>
+      <div class="hint">Наведите на штрихкод</div>
       <button class="stop-btn" onclick="stopCam()">✕ Стоп</button>
     </div>
     <div class="ctrl">
-      <button id="cbtn" class="btn btn-red" onclick="startCam()">📷 Включить камеру <span id="engine-badge"></span></button>
+      <button id="cbtn" class="btn btn-red" onclick="startCam()">📷 Сканировать камерой</button>
       <div class="divider">или</div>
-      <input type="text" id="bi" placeholder="Введите штрихкод (8–13 цифр)" inputmode="numeric" onkeydown="if(event.key==='Enter')goBarcode()">
-      <button class="btn btn-out" onclick="goBarcode()">🔍 Найти продукт</button>
+      <input type="text" id="bi" placeholder="Введите штрихкод вручную" inputmode="numeric">
+      <button class="btn btn-out" onclick="goBarcode()">🔍 Найти по коду</button>
+      <p class="info" id="hint-text"></p>
     </div>
   </div>
 </div>
@@ -115,228 +98,186 @@ textarea{height:78px;resize:vertical;line-height:1.5}
     <div class="lbl">Введите Е-добавки через запятую</div>
     <textarea id="mi" placeholder="Например: E102, E211, E621, E330"></textarea>
   </div>
-  <button class="btn btn-red" onclick="goManual()">🔬 Расшифровать добавки</button>
+  <button class="btn btn-red" onclick="goManual()">🔬 Расшифровать</button>
 </div>
 
 <p id="status"></p>
 <div id="result"></div>
 
 <script>
-// === БАЗА ДАННЫХ ===
 var DB={
-"E100":["Куркумин","Натуральный краситель из куркумы","safe"],
-"E101":["Рибофлавин","Витамин B2. Безопасен","safe"],
-"E102":["Тартразин","Синтетический краситель. Аллергия, гиперактивность у детей","danger"],
-"E104":["Жёлтый хинолиновый","Краситель. Запрещён в США, Японии","danger"],
-"E110":["Солнечный закат FCF","Краситель-аллерген. Запрещён в Норвегии","danger"],
-"E120":["Кармин","Натуральный краситель из кошенили. Может вызывать аллергию","warning"],
-"E122":["Азорубин","Краситель-аллерген. Запрещён в Швеции и США","danger"],
-"E123":["Амарант","Краситель. Запрещён в США с 1976 — подозреваемый канцероген","danger"],
-"E124":["Понсо 4R","Краситель. Запрещён в США, аллерген","danger"],
-"E127":["Эритрозин","Краситель. Запрещён в Норвегии, влияет на щитовидную железу","danger"],
-"E129":["Красный очаровательный AC","Краситель. Может вызывать аллергию","warning"],
-"E131":["Патентованный синий V","Краситель. Аллерген, риск анафилаксии","warning"],
-"E132":["Индигокармин","Синий краситель. Аллерген","warning"],
-"E133":["Бриллиантовый голубой FCF","Краситель. Осторожно при астме","warning"],
-"E140":["Хлорофилл","Натуральный зелёный краситель. Безопасен","safe"],
-"E141":["Медные комплексы хлорофилла","Краситель. Безопасен в малых дозах","safe"],
-"E150a":["Сахарный колер I","Карамель натуральная. Безопасна","safe"],
-"E150b":["Сахарный колер II","Карамель с сульфитами. С осторожностью","warning"],
-"E150c":["Сахарный колер III","Карамель с аммонием. С осторожностью","warning"],
-"E150d":["Сахарный колер IV","Карамель с аммонием+сульфитами. Содержит 4-МИ — возможный канцероген","warning"],
-"E153":["Уголь растительный","Чёрный краситель. Безопасен","safe"],
-"E160a":["Бета-каротин","Провитамин A, антиоксидант. Безопасен","safe"],
-"E160b":["Аннато","Натуральный краситель. Может вызывать аллергию","warning"],
-"E160c":["Паприка","Натуральный краситель. Безопасен","safe"],
-"E160d":["Ликопин","Антиоксидант из томатов. Полезен","safe"],
-"E161b":["Лютеин","Натуральный краситель. Полезен для зрения","safe"],
-"E162":["Свекольный красный","Натуральный краситель. Безопасен","safe"],
-"E163":["Антоцианы","Натуральные красители из ягод. Антиоксиданты","safe"],
-"E170":["Карбонат кальция","Белый краситель (мел). Безопасен","safe"],
-"E171":["Диоксид титана","Белый краситель. Запрещён в ЕС с 2022 — возможный канцероген","danger"],
-"E172":["Оксиды железа","Натуральные пигменты. Безопасны","safe"],
-"E173":["Алюминий","Металлический краситель. Накапливается в организме","warning"],
-"E174":["Серебро","Краситель. Безопасен в малых количествах","safe"],
-"E175":["Золото","Краситель для кондитерских изделий. Безопасен","safe"],
-"E200":["Сорбиновая кислота","Консервант. Безопасен","safe"],
-"E202":["Сорбат калия","Консервант. Безопасен","safe"],
-"E203":["Сорбат кальция","Консервант. Безопасен","safe"],
-"E210":["Бензойная кислота","Консервант. Может вызывать аллергию","warning"],
-"E211":["Бензоат натрия","Консервант. С витамином C образует бензол — канцероген","warning"],
-"E212":["Бензоат калия","Консервант. Аналог E211, те же риски","warning"],
-"E213":["Бензоат кальция","Консервант. Аллерген","warning"],
-"E214":["Этилпарабен","Консервант. Возможный эндокринный разрушитель","warning"],
-"E218":["Метилпарабен","Консервант. Подозреваемый эндокринный разрушитель","warning"],
-"E220":["Диоксид серы","Консервант. Разрушает витамин B1, запрещён астматикам","danger"],
-"E221":["Сульфит натрия","Консервант. Сильный аллерген","danger"],
-"E222":["Гидросульфит натрия","Консервант. Сильный аллерген","danger"],
-"E223":["Метабисульфит натрия","Консервант. Сильный аллерген","danger"],
-"E224":["Метабисульфит калия","Консервант. Сильный аллерген","danger"],
-"E228":["Гидросульфит калия","Консервант. Аллерген","danger"],
-"E230":["Дифенил","Фунгицид для цитрусовых. Подозреваемый канцероген","danger"],
-"E231":["Ортофенилфенол","Консервант. Возможный канцероген","danger"],
-"E234":["Низин","Природный антибиотик-консервант. Безопасен","safe"],
-"E235":["Натамицин","Природный противогрибковый. Безопасен","safe"],
-"E239":["Гексаметилентетрамин","Консервант. Запрещён во многих странах","danger"],
-"E242":["Диметилдикарбонат","Консервант для напитков. Безопасен","safe"],
-"E249":["Нитрит калия","Консервант для мяса. Токсичен, образует канцерогены","danger"],
-"E250":["Нитрит натрия","Консервант для мяса. В больших дозах токсичен, образует нитрозамины","danger"],
-"E251":["Нитрат натрия","Консервант. Превращается в нитриты в организме","danger"],
-"E252":["Нитрат калия","Консервант (селитра). Превращается в нитриты","danger"],
-"E260":["Уксусная кислота","Консервант, подкислитель. Безопасна","safe"],
-"E261":["Ацетат калия","Консервант. Безопасен","safe"],
-"E262":["Ацетаты натрия","Консервант. Безопасен","safe"],
-"E270":["Молочная кислота","Регулятор кислотности. Природный, безопасен","safe"],
-"E280":["Пропионовая кислота","Консервант от плесени. Безопасна","safe"],
-"E281":["Пропионат натрия","Консервант. Безопасен","safe"],
-"E282":["Пропионат кальция","Консервант в хлебе. Безопасен","safe"],
-"E290":["Диоксид углерода","Газ для газирования. Безопасен","safe"],
-"E296":["Яблочная кислота","Регулятор кислотности. Безопасна","safe"],
-"E297":["Фумаровая кислота","Регулятор кислотности. Безопасна","safe"],
-"E300":["Аскорбиновая кислота","Витамин C. Безопасен","safe"],
-"E301":["Аскорбат натрия","Витамин C. Безопасен","safe"],
-"E302":["Аскорбат кальция","Витамин C. Безопасен","safe"],
-"E306":["Токоферол","Витамин E натуральный. Безопасен","safe"],
-"E307":["Альфа-токоферол","Витамин E синтетический. Безопасен","safe"],
-"E310":["Пропилгаллат","Антиоксидант. Может вызывать аллергию","warning"],
-"E319":["ТБГХ","Антиоксидант. Ограничен в ЕС, в высоких дозах токсичен","warning"],
-"E320":["БОА (бутилгидроксианизол)","Антиоксидант. Возможный канцероген, запрещён в Японии","danger"],
-"E321":["БОТ (бутилгидрокситолуол)","Антиоксидант. Подозреваемый канцероген, запрещён в Японии","danger"],
-"E322":["Лецитины","Эмульгатор из сои/подсолнечника. Безопасен","safe"],
-"E325":["Лактат натрия","Регулятор кислотности. Безопасен","safe"],
-"E326":["Лактат калия","Регулятор кислотности. Безопасен","safe"],
-"E330":["Лимонная кислота","Регулятор кислотности. Природный, безопасен","safe"],
-"E331":["Цитраты натрия","Регулятор кислотности. Безопасен","safe"],
-"E332":["Цитраты калия","Регулятор кислотности. Безопасен","safe"],
-"E333":["Цитраты кальция","Регулятор кислотности. Безопасен","safe"],
-"E334":["Виннокаменная кислота","Регулятор кислотности. Безопасна","safe"],
-"E338":["Ортофосфорная кислота","Подкислитель. Нарушает усвоение кальция в больших дозах","warning"],
-"E339":["Фосфаты натрия","Эмульгатор. Нагрузка на почки в больших дозах","warning"],
-"E340":["Фосфаты калия","Эмульгатор. С осторожностью","warning"],
-"E341":["Фосфаты кальция","Регулятор кислотности. Безопасен","safe"],
-"E385":["Кальция динатрия ЭДТА","Антиоксидант. С осторожностью","warning"],
-"E400":["Альгиновая кислота","Загуститель из водорослей. Безопасен","safe"],
-"E401":["Альгинат натрия","Загуститель. Безопасен","safe"],
-"E406":["Агар-агар","Загуститель. Безопасен, полезен","safe"],
-"E407":["Каррагинан","Загуститель. Может вызывать воспаление кишечника","warning"],
-"E410":["Камедь рожкового дерева","Загуститель. Безопасен","safe"],
-"E412":["Гуаровая камедь","Загуститель. Безопасна","safe"],
-"E413":["Трагакант","Загуститель. Безопасен","safe"],
-"E414":["Гуммиарабик","Загуститель. Безопасен","safe"],
-"E415":["Ксантановая камедь","Загуститель. Безопасна","safe"],
-"E418":["Геллановая камедь","Загуститель. Безопасна","safe"],
-"E420":["Сорбит","Подсластитель. В больших дозах — слабительный эффект","safe"],
-"E421":["Маннит","Подсластитель. В больших дозах слабит","safe"],
-"E422":["Глицерин","Влагоудержание. Безопасен","safe"],
-"E432":["Полисорбат 20","Эмульгатор. С осторожностью","warning"],
-"E433":["Полисорбат 80","Эмульгатор. Может влиять на микробиом","warning"],
-"E435":["Полисорбат 60","Эмульгатор. С осторожностью","warning"],
-"E440":["Пектин","Загуститель из фруктов. Полезен","safe"],
-"E441":["Желатин","Гелеобразователь. Безопасен","safe"],
-"E442":["Фосфатиды аммония","Эмульгатор. Безопасен","safe"],
-"E450":["Пирофосфаты","Эмульгатор. Нарушает баланс кальция/фосфора при избытке","warning"],
-"E451":["Трифосфаты","Эмульгатор. С осторожностью при болезнях почек","warning"],
-"E452":["Полифосфаты","Эмульгатор. Накапливается, нагрузка на почки","danger"],
-"E460":["Целлюлоза","Загуститель, клетчатка. Безопасна","safe"],
-"E461":["Метилцеллюлоза","Загуститель. Безопасна","safe"],
-"E464":["Гидроксипропилметилцеллюлоза","Загуститель. Безопасна","safe"],
-"E466":["Карбоксиметилцеллюлоза","Загуститель. Может влиять на микробиом","warning"],
-"E471":["Моно- и диглицериды жирных кислот","Эмульгатор. Безопасен","safe"],
-"E472e":["Диацетилвиннокаменные эфиры МДГ","Эмульгатор (DATEM). Безопасен","safe"],
-"E473":["Сахарозные эфиры жирных кислот","Эмульгатор. Безопасен","safe"],
-"E475":["Полиглицериновые эфиры","Эмульгатор. Безопасен","safe"],
-"E476":["Полиглицерин полирицинолеат","Эмульгатор (PGPR). Часто из ГМО-сои","warning"],
-"E481":["Стеароилактилат натрия","Эмульгатор. Безопасен","safe"],
-"E482":["Стеароилактилат кальция","Эмульгатор. Безопасен","safe"],
-"E491":["Сорбитанмоностеарат","Эмульгатор. Безопасен","safe"],
-"E500":["Карбонаты натрия","Разрыхлитель (сода). Безопасен","safe"],
-"E501":["Карбонаты калия","Разрыхлитель. Безопасен","safe"],
-"E503":["Карбонаты аммония","Разрыхлитель. Безопасен","safe"],
-"E509":["Хлорид кальция","Отвердитель. Безопасен","safe"],
-"E511":["Хлорид магния","Отвердитель (нигари). Безопасен","safe"],
-"E516":["Сульфат кальция","Отвердитель. Безопасен","safe"],
-"E535":["Ферроцианид натрия","Против слеживания. В больших дозах токсичен","warning"],
-"E536":["Ферроцианид калия","Против слеживания. В больших дозах токсичен","warning"],
-"E551":["Диоксид кремния","Против слеживания. Безопасен","safe"],
-"E552":["Силикат кальция","Против слеживания. Безопасен","safe"],
-"E553b":["Тальк","Против слеживания. Безопасен в пищевых дозах","safe"],
-"E570":["Жирные кислоты","Против слеживания. Безопасны","safe"],
-"E575":["Глюконо-дельта-лактон","Регулятор кислотности. Безопасен","safe"],
-"E620":["Глутаминовая кислота","Усилитель вкуса. Природная аминокислота","safe"],
-"E621":["Глутамат натрия (MSG)","Усилитель вкуса. Может вызывать головные боли у чувствительных людей","warning"],
-"E622":["Глутамат калия","Усилитель вкуса. Аналог E621","warning"],
-"E627":["Гуанилат натрия","Усилитель вкуса. Часто с E621. Осторожно при подагре","warning"],
-"E631":["Инозинат натрия","Усилитель вкуса. Осторожно при подагре","warning"],
-"E635":["5'-рибонуклеотиды натрия","Усилитель вкуса (E627+E631). Спорная безопасность","warning"],
-"E640":["Глицин","Усилитель вкуса. Аминокислота, безопасен","safe"],
-"E900":["Диметилполисилоксан","Пеногаситель. Безопасен","safe"],
-"E901":["Пчелиный воск","Глазирователь. Безопасен","safe"],
-"E903":["Карнаубский воск","Глазирователь из пальмы. Безопасен","safe"],
-"E904":["Шеллак","Глазирователь. Безопасен","safe"],
-"E920":["L-цистеин","Улучшитель муки. Из волос/перьев птиц","warning"],
-"E938":["Аргон","Упаковочный газ. Безопасен","safe"],
-"E941":["Азот","Упаковочный газ. Безопасен","safe"],
-"E950":["Ацесульфам калия","Подсластитель. Спорная безопасность","warning"],
-"E951":["Аспартам","Подсластитель. Запрещён при фенилкетонурии","warning"],
-"E952":["Цикламат","Подсластитель. Запрещён в США и ряде стран","danger"],
-"E953":["Изомальт","Подсластитель. Безопасен","safe"],
-"E954":["Сахарин","Подсластитель. В высоких дозах — канцероген у грызунов","warning"],
-"E955":["Сукралоза","Подсластитель. Безопасен в разрешённых дозах","safe"],
-"E957":["Тауматин","Натуральный подсластитель. Безопасен","safe"],
-"E960":["Стевия (гликозиды стевиола)","Натуральный подсластитель. Безопасен","safe"],
-"E961":["Неотам","Подсластитель. Безопасен","safe"],
-"E965":["Мальтит","Подсластитель. В больших дозах слабит","safe"],
-"E966":["Лактит","Подсластитель. В больших дозах слабит","safe"],
-"E967":["Ксилит","Подсластитель. Полезен для зубов","safe"],
-"E968":["Эритрит","Подсластитель. 0 калорий, хорошо переносится","safe"],
-"E969":["Адвантам","Подсластитель. Безопасен","safe"],
-"E1200":["Полидекстроза","Растворимая клетчатка. Безопасна","safe"],
-"E1400":["Декстрины","Стабилизатор из крахмала. Безопасен","safe"],
-"E1404":["Окисленный крахмал","Загуститель. Безопасен","safe"],
-"E1410":["Монокрахмалфосфат","Загуститель. Безопасен","safe"],
-"E1412":["Дикрахмалфосфат","Загуститель. Безопасен","safe"],
-"E1414":["Ацетилированный дикрахмалфосфат","Загуститель. Безопасен","safe"],
-"E1420":["Ацетилированный крахмал","Загуститель. Безопасен","safe"],
-"E1422":["Ацетилированный дикрахмаладипат","Загуститель. Безопасен","safe"],
-"E1440":["Гидроксипропилкрахмал","Загуститель. Безопасен","safe"],
-"E1442":["Гидроксипропилдикрахмалфосфат","Загуститель. Безопасен","safe"],
-"E1450":["Крахмала октенилсукцинат натрия","Стабилизатор. Безопасен","safe"],
-"E1520":["Пропиленгликоль","Растворитель. С осторожностью","warning"]
+"E100":["Куркумин","Натуральный краситель","safe"],"E102":["Тартразин","Краситель. Аллергия","danger"],
+"E110":["Солнечный закат","Краситель. Аллерген","danger"],"E120":["Кармин","Натуральный краситель","warning"],
+"E122":["Азорубин","Краситель. Аллерген","danger"],"E124":["Понсо 4R","Краситель. Запрещён в США","danger"],
+"E129":["Красный очаровательный","Краситель. Аллергия","warning"],"E133":["Бриллиантовый голубой","Осторожно при астме","warning"],
+"E150a":["Сахарный колер I","Карамель. Безопасна","safe"],"E150d":["Сахарный колер IV","Возможный канцероген","warning"],
+"E153":["Уголь растительный","Безопасен","safe"],"E160a":["Бета-каротин","Провитамин A","safe"],
+"E162":["Свекольный красный","Натуральный краситель","safe"],"E170":["Карбонат кальция","Мел. Безопасен","safe"],
+"E171":["Диоксид титана","Запрещён в ЕС с 2022","danger"],"E200":["Сорбиновая кислота","Консервант. Безопасен","safe"],
+"E202":["Сорбат калия","Консервант. Безопасен","safe"],"E211":["Бензоат натрия","С витамином C даёт бензол","warning"],
+"E220":["Диоксид серы","Астматикам нельзя","danger"],"E250":["Нитрит натрия","Токсичен, канцероген","danger"],
+"E260":["Уксусная кислота","Безопасна","safe"],"E270":["Молочная кислота","Безопасна","safe"],
+"E300":["Аскорбиновая кислота","Витамин C","safe"],"E306":["Токоферол","Витамин E","safe"],
+"E319":["ТБГХ","Ограничен в ЕС","warning"],"E320":["БОА","Возможный канцероген","danger"],
+"E321":["БОТ","Запрещён в Японии","danger"],"E322":["Лецитины","Эмульгатор. Безопасен","safe"],
+"E330":["Лимонная кислота","Безопасна","safe"],"E338":["Ортофосфорная кислота","Вымывает кальций","warning"],
+"E400":["Альгиновая кислота","Из водорослей. Безопасен","safe"],"E406":["Агар-агар","Безопасен","safe"],
+"E407":["Каррагинан","Может вызывать воспаления","warning"],"E412":["Гуаровая камедь","Безопасна","safe"],
+"E415":["Ксантановая камедь","Безопасна","safe"],"E420":["Сорбит","Слабит в больших дозах","safe"],
+"E422":["Глицерин","Безопасен","safe"],"E440":["Пектин","Из фруктов. Полезен","safe"],
+"E450":["Пирофосфаты","Нарушает баланс кальция","warning"],"E451":["Трифосфаты","Осторожно при болезнях почек","warning"],
+"E452":["Полифосфаты","Нагрузка на почки","danger"],"E460":["Целлюлоза","Клетчатка. Безопасна","safe"],
+"E466":["Карбоксиметилцеллюлоза","Безопасна","safe"],"E471":["Моно- и диглицериды","Эмульгатор. Безопасен","safe"],
+"E476":["Полиглицерин","Часто из ГМО-сои","warning"],"E500":["Карбонаты натрия","Сода. Безопасен","safe"],
+"E509":["Хлорид кальция","Безопасен","safe"],"E551":["Диоксид кремния","Безопасен","safe"],
+"E621":["Глутамат натрия","Головные боли у чувствительных","warning"],"E631":["Инозинат натрия","Осторожно","warning"],
+"E901":["Пчелиный воск","Безопасен","safe"],"E904":["Шеллак","Безопасен","safe"],
+"E950":["Ацесульфам калия","Спорно","warning"],"E951":["Аспартам","Запрещён при фенилкетонурии","warning"],
+"E952":["Цикламат","Запрещён в США","danger"],"E955":["Сукралоза","Безопасна","safe"],
+"E960":["Стевия","Натуральный. Безопасен","safe"],"E967":["Ксилит","Полезен для зубов","safe"],
+"E968":["Эритрит","0 калорий","safe"],"E1422":["Ацетилированный крахмал","Безопасен","safe"]
 };
 
-// === СОСТОЯНИЕ СКАНЕРА ===
-var stream=null, raf=null, detector=null, quaggaRunning=false;
-var useNative = ('BarcodeDetector' in window);
+var stream=null,detector=null,scanActive=false;
+var hasNative = ('BarcodeDetector' in window);
 
-// Показываем бейдж движка
-(function(){
-    var badge = document.getElementById('engine-badge');
-    if (badge) {
-        badge.textContent = useNative ? '⚡ нативный' : '🔄 Quagga';
-        badge.title = useNative ? 'Android / Chrome — быстрый сканер' : 'iPhone / Safari — сканер с анализом кадров';
-    }
-})();
+// Показываем подсказку
+document.getElementById('hint-text').textContent = hasNative ? 
+  '⚡ Ваше устройство поддерживает быстрое сканирование' : 
+  '📱 На iPhone сканер камеры недоступен. Введите штрихкод вручную или скопируйте цифры с упаковки.';
 
 function sw(t){
   document.querySelectorAll('.tab-content').forEach(function(e){e.classList.remove('active')});
   document.querySelectorAll('.tab-btn').forEach(function(e){e.classList.remove('active')});
   document.getElementById('tab-'+t).classList.add('active');
   document.querySelectorAll('.tab-btn')[t==='scan'?0:1].classList.add('active');
-  st('');
 }
 function st(m){document.getElementById('status').textContent=m}
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 
 function stopCam(){
-  if(raf){cancelAnimationFrame(raf);raf=null}
-  if(quaggaRunning && typeof Quagga !== 'undefined'){
-    try{ Quagga.stop(); }catch(e){}
-    quaggaRunning=false;
-  }
+  scanActive=false;
   if(stream){stream.getTracks().forEach(function(t){t.stop()});stream=null}
   document.getElementById('vcont').classList.remove('on');
-  var b=document.getElementById('cbtn');b.textContent='📷 Включить камеру';b.disabled=false;
+  document.getElementById('cbtn').textContent='📷 Сканировать камерой';
+  document.getElementById('cbtn').disabled=false;
 }
 
 function startCam(){
-  document.getElementById
+  if(!hasNative){
+    st('Сканер камеры не поддерживается на этом устройстве');
+    return;
+  }
+  document.getElementById('result').innerHTML='';
+  document.getElementById('cbtn').disabled=true;
+  document.getElementById('cbtn').textContent='⏳ Запуск...';
+  st('Запрашиваю камеру...');
+  
+  navigator.mediaDevices.getUserMedia({video:{facingMode:'environment',width:1280,height:720}})
+    .then(function(s){
+      stream=s;
+      var v=document.getElementById('vid');
+      v.srcObject=s;
+      document.getElementById('vcont').classList.add('on');
+      document.getElementById('cbtn').textContent='🔄 Перезапустить';
+      document.getElementById('cbtn').disabled=false;
+      v.onloadedmetadata=function(){
+        v.play();
+        st('Наведите камеру на штрихкод');
+        detector=new BarcodeDetector({formats:['ean_13','ean_8','upc_a','code_128','code_39']});
+        scanActive=true;
+        scanLoop(v);
+      };
+    })
+    .catch(function(e){
+      stopCam();
+      st('Нет доступа к камере. Разрешите в настройках браузера.');
+    });
+}
+
+function scanLoop(v){
+  if(!scanActive||!stream)return;
+  detector.detect(v).then(function(r){
+    if(r.length>0){
+      var code=r[0].rawValue;
+      stopCam();
+      st('Найден: '+code);
+      fetchProduct(code);
+    }else{
+      requestAnimationFrame(function(){scanLoop(v)});
+    }
+  }).catch(function(){
+    requestAnimationFrame(function(){scanLoop(v)});
+  });
+}
+
+function goBarcode(){
+  var code=document.getElementById('bi').value.trim().replace(/\D/g,'');
+  if(code.length<8){st('Введите от 8 цифр');return}
+  document.getElementById('result').innerHTML='';
+  st('Ищем...');
+  fetchProduct(code);
+}
+
+function fetchProduct(code){
+  fetch('https://world.openfoodfacts.org/api/v0/product/'+code+'.json?fields=product_name,product_name_ru,brands,additives_tags')
+    .then(function(r){return r.json()})
+    .then(function(d){
+      if(d.status===1){
+        st('');
+        var p=d.product;
+        var name=p.product_name_ru||p.product_name||'Без названия';
+        var brand=p.brands||'';
+        var tags=p.additives_tags||[];
+        var codes=tags.map(function(t){return t.replace(/^[a-z]{2}:/i,'').toUpperCase()});
+        renderAdditives(name,brand,codes);
+      }else{
+        st('Не найдено');
+        document.getElementById('result').innerHTML='<div style="text-align:center;padding:20px;color:var(--text2)">😔 Товар не найден.<br><br><a href="https://world.openfoodfacts.org/product/'+code+'/add" target="_blank">➕ Добавить в базу</a></div>';
+      }
+    })
+    .catch(function(){st('Ошибка соединения')});
+}
+
+function goManual(){
+  var raw=document.getElementById('mi').value.trim().toUpperCase();
+  if(!raw){st('Введите Е-добавки');return}
+  var codes=raw.split(/[\s,;]+/).filter(Boolean).map(function(c){c=c.trim();return c[0]==='E'?c:'E'+c});
+  st('');
+  document.getElementById('result').innerHTML='';
+  renderAdditives(null,null,codes);
+}
+
+function renderAdditives(name,brand,codes){
+  var html='';
+  if(name){
+    html+='<div class="ph"><div class="pn">📦 '+esc(name)+'</div>';
+    if(brand)html+='<div class="pm">'+esc(brand)+'</div>';
+    var nd=codes.filter(function(c){return DB[c]&&DB[c][2]==='danger'}).length;
+    var nw=codes.filter(function(c){return DB[c]&&DB[c][2]==='warning'}).length;
+    var ns=codes.filter(function(c){return DB[c]&&DB[c][2]==='safe'}).length;
+    html+='<div class="badges">';
+    if(codes.length===0)html+='<span class="badge bc">✓ Без Е-добавок</span>';
+    else{
+      if(nd)html+='<span class="badge bd">⚠ опасных: '+nd+'</span>';
+      if(nw)html+='<span class="badge bw">! спорных: '+nw+'</span>';
+      if(ns)html+='<span class="badge bc">✓ безопасных: '+ns+'</span>';
+    }
+    html+='</div></div>';
+  }
+  if(codes.length===0){
+    html+='<div class="clean"><div class="ci">🌿</div><div class="ct">Продукт чистый!</div><div class="cs">Е-добавки не обнаружены</div></div>';
+    document.getElementById('result').innerHTML=html;return;
+  }
+  html+='<div class="legend"><span class="li"><span class="ld" style="background:var(--red)"></span>Опасно</span><span class="li"><span class="ld" style="background:var(--yellow)"></span>Спорно</span><span class="li"><span class="ld" style="background:var(--green)"></span>Безопасно</span></div>';
+  codes.forEach(function(c){
+    var i=DB[c];
+    var cls=i?i[2]:'unknown';
+    var icon=cls==='danger'?'🔴':cls==='warning'?'🟡':cls==='safe'?'🟢':'⚪';
+    html+='<div class="ai '+cls+'"><span class="si">'+icon+'</span><div class="ac">'+c+(i?' — <span class="an">'+esc(i[0])+'</span>':'')+'</div>'+(i?'<div class="ad">'+esc(i[1])+'</div>':'<div class="ad">Нет данных</div>')+'</div>';
+  });
+  document.getElementById('result').innerHTML=html;
+}
+</script>
+</body>
+</html>
